@@ -5,11 +5,15 @@ from datetime import datetime, timezone
 TOKEN   = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
+print(f"🔐 TOKEN uzunluk: {len(TOKEN)} karakter")
+print(f"🔐 TOKEN ilk 10: {TOKEN[:10]}...")
+print(f"🔐 CHAT_ID: {CHAT_ID}")
+
 QUOTE            = "USDT"
 INTERVAL         = "5m"
 HOURS            = 24
 MIN_VOLUME_USDT  = 50_000
-TOP_N            = 5
+TOP_N            = 10
 
 STABLES = {"USDC", "RLUSD", "USD1", "UUSDT", "FDUSD", "TUSD", "DAI",
            "BUSD", "USDP", "PYUSD", "USDD", "USDE", "XUSD", "EUR",
@@ -95,45 +99,45 @@ def fmt(x):
 
 def main():
     spot = scan("https://data-api.binance.vision/api/v3", "SPOT")
-    fut  = scan("https://fapi.binance.com/fapi/v1", "VADELİ")
 
     now = datetime.now(timezone.utc)
 
     lines = [
-        "📊 *Delta Raporu (Spot + Vadeli)*",
+        "📊 *Spot Delta Raporu*",
         f"🕒 {now.strftime('%d.%m.%Y %H:%M')} UTC",
         f"⏱️ Son {HOURS} saat",
+        f"📊 {len(spot)} parite",
         "",
-        f"💧 *SPOT* ({len(spot)} parite)",
-        "🔴 En Çok Satış:",
+        "🔴 *En Çok Satış*",
     ]
     for r in spot[:TOP_N]:
         lines.append(f"`{r['symbol']:<13}` {fmt(r['delta'])}")
 
-    lines.append("🟢 En Çok Alış:")
+    lines.append("")
+    lines.append("🟢 *En Çok Alış*")
     for r in spot[-TOP_N:][::-1]:
         lines.append(f"`{r['symbol']:<13}` {fmt(r['delta'])}")
 
-    lines.append("")
-    lines.append(f"⚡ *VADELİ* ({len(fut)} parite)")
-    lines.append("🔴 En Çok Satış:")
-    for r in fut[:TOP_N]:
-        lines.append(f"`{r['symbol']:<13}` {fmt(r['delta'])}")
-
-    lines.append("🟢 En Çok Alış:")
-    for r in fut[-TOP_N:][::-1]:
-        lines.append(f"`{r['symbol']:<13}` {fmt(r['delta'])}")
-
     message = "\n".join(lines)
+    print(f"📨 Mesaj uzunluğu: {len(message)} karakter")
+    print(f"📨 Mesajın ilk satırı: {lines[0]}")
 
     url_tg = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    r = requests.post(url_tg, data={
-        "chat_id": CHAT_ID,
-        "text": message,
-        "parse_mode": "Markdown"
-    }, timeout=30)
-
-    print(r.json())
+    try:
+        r = requests.post(url_tg, data={
+            "chat_id": CHAT_ID,
+            "text": message,
+            "parse_mode": "Markdown"
+        }, timeout=30)
+        print(f"📤 Telegram yanıtı: {r.status_code}")
+        print(f"📤 Telegram JSON: {r.json()}")
+        
+        if not r.json().get("ok"):
+            print(f"❌ TELEGRAM HATASI: {r.json()}")
+        else:
+            print(f"✅ TELEGRAM BAŞARILI")
+    except Exception as e:
+        print(f"❌ Telegram gönderim hatası: {e}")
 
 
 if __name__ == "__main__":
