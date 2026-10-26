@@ -18,7 +18,17 @@ STABLES = {"USDC", "RLUSD", "USD1", "UUSDT", "FDUSD", "TUSD", "DAI",
 
 def scan(base_url, label):
     print(f"🔍 {label} pariteleri alınıyor...")
-    info = requests.get(f"{base_url}/exchangeInfo", timeout=30).json()
+    try:
+        r = requests.get(f"{base_url}/exchangeInfo", timeout=30)
+        info = r.json()
+    except Exception as e:
+        print(f"❌ {label} bağlantı hatası: {e}")
+        return []
+    
+    if not isinstance(info, dict) or "symbols" not in info:
+        print(f"❌ {label} API hatası: {info}")
+        return []
+    
     symbols = [s["symbol"] for s in info["symbols"]
                if s.get("quoteAsset") == QUOTE and s.get("status") == "TRADING"]
     symbols = [s for s in symbols if not any(s.startswith(st) for st in STABLES)]
@@ -84,7 +94,7 @@ def fmt(x):
 
 
 def main():
-    spot = scan("https://api.binance.com/api/v3",  "SPOT")
+    spot = scan("https://data-api.binance.vision/api/v3", "SPOT")
     fut  = scan("https://fapi.binance.com/fapi/v1", "VADELİ")
 
     now = datetime.now(timezone.utc)
