@@ -3,7 +3,7 @@ import requests
 from datetime import datetime, timezone
 
 TOKEN   = os.environ["TELEGRAM_TOKEN"]
-CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 print(f"🔐 TOKEN uzunluk: {len(TOKEN)} karakter")
 print(f"🔐 TOKEN ilk 10: {TOKEN[:10]}...")
@@ -14,6 +14,9 @@ INTERVAL         = "5m"
 HOURS            = 24
 MIN_VOLUME_USDT  = 50_000
 TOP_N            = 10
+
+# Hem kişisel hem grup
+CHAT_IDS = ["6241200099", "-1003545378637"]
 
 STABLES = {"USDC", "RLUSD", "USD1", "UUSDT", "FDUSD", "TUSD", "DAI",
            "BUSD", "USDP", "PYUSD", "USDD", "USDE", "XUSD", "EUR",
@@ -97,6 +100,20 @@ def fmt(x):
     return f"{x:+.2f}"
 
 
+def send_telegram(text):
+    for cid in CHAT_IDS:
+        url_tg = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+        try:
+            r = requests.post(url_tg, data={
+                "chat_id": cid,
+                "text": text,
+                "parse_mode": "Markdown"
+            }, timeout=30)
+            print(f"📤 {cid} → {r.status_code}: {r.json().get('ok')}")
+        except Exception as e:
+            print(f"❌ {cid} hatası: {e}")
+
+
 def main():
     spot = scan("https://data-api.binance.vision/api/v3", "SPOT")
 
@@ -122,22 +139,7 @@ def main():
     print(f"📨 Mesaj uzunluğu: {len(message)} karakter")
     print(f"📨 Mesajın ilk satırı: {lines[0]}")
 
-    url_tg = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    try:
-        r = requests.post(url_tg, data={
-            "chat_id": CHAT_ID,
-            "text": message,
-            "parse_mode": "Markdown"
-        }, timeout=30)
-        print(f"📤 Telegram yanıtı: {r.status_code}")
-        print(f"📤 Telegram JSON: {r.json()}")
-        
-        if not r.json().get("ok"):
-            print(f"❌ TELEGRAM HATASI: {r.json()}")
-        else:
-            print(f"✅ TELEGRAM BAŞARILI")
-    except Exception as e:
-        print(f"❌ Telegram gönderim hatası: {e}")
+    send_telegram(message)
 
 
 if __name__ == "__main__":
